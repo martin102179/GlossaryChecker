@@ -3,7 +3,6 @@
 #V1.2
 
 import codecs
-import csv
 from operator import itemgetter
 import copy
 import re
@@ -13,21 +12,9 @@ import time
 import glob
 from chardet.universaldetector import UniversalDetector
 import pydocx
-from html.parser import HTMLParser
+from HTMLParser import HTMLParser
 import os
 
-
-class MyParser(HTMLParser):
-    def __init__(self):
-        HTMLParser.__init__(self)
-        self.reset()
-        self.HTMLDATA = []
-
-    def handle_data(self, data):
-        self.HTMLDATA.append(data)
-
-    def clean(self):
-        self.HTMLDATA = []
 
 alphabet = set(['a','b','c','d','e','f','g','h','i','j','k''l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','A','B',
                      'C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'])
@@ -143,7 +130,7 @@ window.onload = NoErrorhideFunction</script>
 <body>
 <div id="framecontentleft">
 <div class="innertube">
-<script src="jquery-3.1.0.js"></script>
+<script src="c:\QATest_1.0\lib\GlossaryChecker\jquery-3.1.0.js"></script>
 <input type="checkbox" id="HideTag" name="HideTag">Unmark correct glossaries<br>
 <input type="checkbox" id="MinorHide" name="MinorHide">Hide lines that only has minor mistake ( {} tag in glossary comment)<br>
 <input type="checkbox" id="NoErrorhide" name="NoErrorhide" checked>Hide lines with no glossary error<br>
@@ -151,8 +138,7 @@ window.onload = NoErrorhideFunction</script>
 <div id="framecontentright">
 <div class="innertube">'''
 
-htmlhead_two='Segments in source file: %d<br>'
-htmlhead_three='Segments in localized file: %d<br>'
+
 htmlhead_four='''</div>
 </div>
 </div>
@@ -162,6 +148,17 @@ htmlhead_four='''</div>
 <div class="innertube">
 <table style="width:100%;table-layout:fixed">'''
 
+class MyParser(HTMLParser):
+    def __init__(self):
+        HTMLParser.__init__(self)
+        self.reset()
+        self.HTMLDATA = []
+
+    def handle_data(self, data):
+        self.HTMLDATA.append(data)
+
+    def clean(self):
+        self.HTMLDATA = []
 
 
 def Read_in_Glossary(Path):
@@ -189,6 +186,36 @@ def Read_in_Glossary(Path):
     return ProcessedList
 
 
+def Read_in_File(Path, mode):
+    # Path provide file path
+    # mode decides if this is a HTML or a Docx
+    # if_this_is_html_source_file needs to be assigne True when reading the source HTML file. Otherwise it can be
+    # ignored.
+
+    docxreader = pydocx.PyDocX
+
+    try:
+        if mode == 'html':
+            if 'source' in Path:
+                # if this is HTML source file, open it in cp1252
+                fin = codecs.open('%s' % Path, 'r', encoding='cp1252', errors='replace')
+            else:
+                fin = codecs.open('%s' % Path, 'r', encoding='utf-8', errors='replace')
+            temp = fin.read()
+            fin.close()
+
+        elif mode == 'docx':
+            temp = docxreader.to_html(Path)
+        print('%s found' % Path)
+        # read file success, return a parsed document (it's a list)
+        return Parse_Document(temp)
+
+    except IOError:
+        print('%s not found' % Path)
+        # read file failed. return an empty list
+        return []
+
+
 def Parse_Document(html):
 
     #*******************************************************************************************************************
@@ -198,12 +225,13 @@ def Parse_Document(html):
     #*******************************************************************************************************************
     html = html.replace('<p', '※<p' )
     html = html.replace('<h', '※<h')
-    html = html.replace('<span style="font', '※<span style="font')
+    #html = html.replace('<span style="font', '※<span style="font')
+    html = html.replace('<block', '※<block')
+    html = html.replace('<table', '※<table')
     html = html.replace('<li', '※<li')
     # replace \ufffd replacement character with single quote.
     html = html.replace(u'\ufffd', '\'')
     html = html.replace('’', '\'')
-    #html = html.replace(' \' ', '－')
     html = html.replace('&mdash;' , '')
     html = html.replace('&nbsp;' , '')
     html = html.replace('&#160;' , '')
@@ -243,34 +271,7 @@ def Check_HTML_Codepage(Path):
 
 
 
-def Read_in_File(Path, mode):
-    # Path provide file path
-    # mode decides if this is a HTML or a Docx
-    # if_this_is_html_source_file needs to be assigne True when reading the source HTML file. Otherwise it can be
-    # ignored.
 
-    docxreader = pydocx.PyDocX
-
-    try:
-        if mode == 'html':
-            if 'source' in Path:
-                # if this is HTML source file, open it in cp1252
-                fin = codecs.open('%s' % Path, 'r', encoding='cp1252', errors='replace')
-            else:
-                fin = codecs.open('%s' % Path, 'r', encoding='utf-8', errors='replace')
-            temp = fin.read()
-            fin.close()
-
-        elif mode == 'docx':
-            temp = docxreader.to_html(Path)
-        print('%s found' % Path)
-        # read file success, return a parsed document (it's a list)
-        return Parse_Document(temp)
-
-    except IOError:
-        print('%s not found' % Path)
-        # read file failed. return an empty list
-        return []
 
 
 
@@ -424,6 +425,7 @@ def Glossary_Check(SrcTable, TargetTable, Glossary):
 def Mark_Up(glossary, TextList, matchflag):
     # This is to mark the correct/incorrect glossary in Scour/Target line with HTML tags
     flag = 0
+    glossary = glossary.decode(encoding='utf-8')
     wordlength = len(glossary)
 
     # The while statement will go through the TextList list to check if there are glossaries inside.
@@ -431,7 +433,8 @@ def Mark_Up(glossary, TextList, matchflag):
     # Holylight is recognized as glossary. The  updated TextList list will be ['Cast', '<some tag>Holylight</some tag>, 'now']
     # List elements with html tag inside are skipped to avoid marking
     while flag < len(TextList):
-        string =  str(TextList[flag]).upper()
+
+        string =  str(TextList[flag]).encode(encoding='utf-8').upper()
 
         position = string.find(glossary.upper())
 
@@ -447,7 +450,9 @@ def Mark_Up(glossary, TextList, matchflag):
             # Only exception is 's'  since it may be in plural from.
 
             if TextList[flag][position - 1:position] not in alphabet:
+
                 if TextList[flag][position + wordlength:position + wordlength + 1] not in back_alphabet:
+
                     if TextList[flag][position + wordlength:position + wordlength + 1] == ('s' or 'S') \
                             and TextList[flag][position + wordlength:position + wordlength + 2] in alphabet:
 
@@ -457,6 +462,7 @@ def Mark_Up(glossary, TextList, matchflag):
 
                     elif matchflag == 'match':
                         # Mark up matched glossary by inserting <a class="correct"></a> tag if the list element has not been marked up yet.
+
                         if '</a>' not in TextList[flag]:
 
                             #copy the content from the position where glossary is found up to the end of the element.
@@ -467,7 +473,9 @@ def Mark_Up(glossary, TextList, matchflag):
                             if TextList[flag] == '':
                                 TextList[flag] = '<a class="correct">' + temp[:wordlength] + '</a>'
                                 TextList.insert(flag + 1, temp[wordlength:])
+
                             else:
+
                                 # insert a list element that contains our glossary plus the <a class...  tags
                                 TextList.insert(flag + 1, '<a class="correct">' + temp[:wordlength] + '</a>')
 
@@ -507,14 +515,23 @@ def Generate_Result(OutputTable, mode, enlength, targetlength, targetencoding=No
     # targetencoding is not necessary parameter when processing other file format.
 
     try:
-        os.mkdir("Output")
+        os.chdir('C:\\')
+        os.mkdir("QATest_Output")
+        os.chdir('C:\\QATest_Output')
+        os.mkdir("Glossary_Check")
+        os.chdir('C:\\QATest_Output\\Glossary_Check')
     except:
-        pass
+        try:
+            os.chdir('C:\\QATest_Output')
+            os.mkdir("Glossary_Check")
+            os.chdir('C:\\QATest_Output\\Glossary_Check')
+        except:
+            os.chdir('C:\\QATest_Output\\Glossary_Check')
     try:
         if mode == 'html':
-            fout = open(r"Output\HTML_check_Result.html", "w",encoding='utf-8')
+            fout = open(r"HTML_check_Result.html", "w")
         if mode == 'docx':
-            fout = open(r"Output\DOCX_check_Result.html", "w", encoding='utf-8')
+            fout = open(r"DOCX_check_Result.html", "w")
 
         fout.write(u'\ufeff') #writing UTF8 BOM to ensure the output is in correct encoding
 
