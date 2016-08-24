@@ -198,7 +198,9 @@ def Parse_Document(html):
     #*******************************************************************************************************************
     html = html.replace('<p', '※<p' )
     html = html.replace('<h', '※<h')
-    html = html.replace('<span style="font', '※<span style="font')
+    #html = html.replace('<span style="font', '※<span style="font')
+    html = html.replace('<block', '※<block')
+    html = html.replace('<table', '※<table')
     html = html.replace('<li', '※<li')
     # replace \ufffd replacement character with single quote.
     html = html.replace(u'\ufffd', '\'')
@@ -253,11 +255,11 @@ def Read_in_File(Path, mode):
 
     try:
         if mode == 'html':
-            if 'source' in Path:
+            #if 'source' in Path:
                 # if this is HTML source file, open it in cp1252
-                fin = codecs.open('%s' % Path, 'r', encoding='cp1252', errors='replace')
-            else:
-                fin = codecs.open('%s' % Path, 'r', encoding='utf-8', errors='replace')
+                #fin = codecs.open('%s' % Path, 'r', encoding='cp1252', errors='replace')
+            #else:
+            fin = codecs.open('%s' % Path, 'r', encoding='utf-8', errors='replace')
             temp = fin.read()
             fin.close()
 
