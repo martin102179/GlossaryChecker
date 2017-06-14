@@ -3,7 +3,7 @@
 
 
 import codecs
-import csv
+import xlrd
 from operator import itemgetter
 import copy
 import re
@@ -584,10 +584,7 @@ def Generate_Result(OutputTable, mode, enlength, targetlength, targetencoding=No
     except:
         pass
     try:
-        if mode == 'html':
-            fout = open(r"Output\HTML_check_Result.html", "w",encoding='utf-8')
-        if mode == 'docx':
-            fout = open(r"Output\DOCX_check_Result.html", "w", encoding='utf-8')
+        fout = open(r'Output\Check_Result_' + mode + '.html', "w",encoding='utf-8')
 
         fout.write(u'\ufeff') #writing UTF8 BOM to ensure the output is in correct encoding
 
@@ -646,26 +643,27 @@ def Generate_Result(OutputTable, mode, enlength, targetlength, targetencoding=No
         fout.write('</table>\n')
         fout.write('</body>')
         fout.close()
-        print('%s Glossary Check completed\n%s_Check_Result.html is saved successfully\n' % (mode.upper(), mode))
+        print('%s Glossary Check completed\nCheck_Result_%s.html is saved successfully\n' % (mode.upper(), mode))
         return 1
 
     except IOError:
-        print ('Error: Unable to generate %s_Check_Result.html\n' % mode)
+        print ('Error: Unable to generate Check_Result_%s.html\n' % mode)
         return 0
 
-def readWoWFile(Path):
+def readLocToolFile(Path):
     if os.path.exists(Path):
-        ProcessedList=[]
-        fin = codecs.open('%s' % Path, 'r', encoding='utf-8', errors='ignore')
-        while True:
-            line =fin.readline()
-            print(line)
-            if not line:
-                break
-            temp =line.split('\t')
-            ProcessedList.append(temp)
+        srcList=[]
+        tarList=[]
+        workbook = xlrd.open_workbook(filename=Path,encoding_override='utf-8')
+        worksheet = workbook.sheet_by_name(sheet_name='Sheet1')
+        for currentrow in range(worksheet.nrows):
+            srcList.append(worksheet.cell(currentrow, 2).value)
+            tarList.append(worksheet.cell(currentrow, 3).value)
 
-        return ProcessedList
+        return srcList, tarList
+
+    else:
+        print(Path + ' is not found in the folder')
 
 
 
@@ -681,7 +679,7 @@ def main():
         html_target_path = r'target.html'
         DOCXsource_path = r'source.docx'
         DOCXtarget_path = r'target.docx'
-        wowFilePath = r'wowfile.txt'
+        loc_tool_path = r'loctool.xlsx'
 
         # Read in Html files
 
@@ -714,10 +712,17 @@ def main():
         result = Generate_Result(OutPutList, 'docx', enlength, targetlength)
         time.sleep(2)
 
-        aaaa=readWoWFile(wowFilePath)
+        # reads LocTool.xlsx
+        SrcList, TargetList = readLocToolFile(loc_tool_path)
+        # Processing LocTool.xlsx
+        enlength = len(SrcList)
+        targetlength = len(TargetList)
+        OutPutList = Glossary_Check(SrcList, TargetList, GlossaryList)
+        result = Generate_Result(OutPutList, 'xlsx', enlength, targetlength)
+        time.sleep(2)
 
 
-        print(aaaa)
+
     else:
         print('Glossary.txt required for glossary check. Exiting Glossary Checker.')
 
