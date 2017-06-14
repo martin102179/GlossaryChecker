@@ -658,15 +658,15 @@ def readLocToolFile(Path):
         workbook = xlrd.open_workbook(filename=Path,encoding_override='utf-8')
         worksheet = workbook.sheet_by_name(sheet_name='Sheet1')
         for currentrow in range(worksheet.nrows):
-            srcList.append(worksheet.cell(currentrow, 2).value)
-            tarList.append(worksheet.cell(currentrow, 3).value)
+            srcList.append(worksheet.cell(currentrow, 0).value)
+            tarList.append(worksheet.cell(currentrow, 1).value)
 
         return srcList, tarList
 
     else:
         print(Path + ' is not found in the folder')
         return [], []
-    
+
 
 
 
