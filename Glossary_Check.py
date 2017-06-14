@@ -652,6 +652,7 @@ def Generate_Result(OutputTable, mode, enlength, targetlength, targetencoding=No
 
 def readLocToolFile(Path):
     if os.path.exists(Path):
+        print('loctool.xlsx is found.\n')
         srcList=[]
         tarList=[]
         workbook = xlrd.open_workbook(filename=Path,encoding_override='utf-8')
@@ -664,6 +665,8 @@ def readLocToolFile(Path):
 
     else:
         print(Path + ' is not found in the folder')
+        return [], []
+    
 
 
 
@@ -698,7 +701,8 @@ def main():
         enlength = len(SrcList)
         targetlength = len(TargetList)
         OutPutList = Glossary_Check(SrcList, TargetList, GlossaryList, )
-        result = Generate_Result(OutPutList, 'html', enlength, targetlength, targetencoding)
+        if not (enlength == 0 and targetlength == 0):
+            result = Generate_Result(OutPutList, 'html', enlength, targetlength, targetencoding)
 
         # Read in Docx files
         SrcList = Read_in_File(DOCXsource_path, 'docx')
@@ -709,7 +713,8 @@ def main():
         enlength = len(SrcList)
         targetlength = len(TargetList)
         OutPutList = Glossary_Check(SrcList, TargetList, GlossaryList)
-        result = Generate_Result(OutPutList, 'docx', enlength, targetlength)
+        if not (enlength == 0 and targetlength == 0):
+            result = Generate_Result(OutPutList, 'docx', enlength, targetlength)
         time.sleep(2)
 
         # reads LocTool.xlsx
@@ -718,7 +723,8 @@ def main():
         enlength = len(SrcList)
         targetlength = len(TargetList)
         OutPutList = Glossary_Check(SrcList, TargetList, GlossaryList)
-        result = Generate_Result(OutPutList, 'xlsx', enlength, targetlength)
+        if not (enlength == 0 and targetlength == 0):
+            result = Generate_Result(OutPutList, 'loctool', enlength, targetlength)
         time.sleep(2)
 
 
