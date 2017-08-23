@@ -29,10 +29,15 @@ class MyParser(HTMLParser):
     def clean(self):
         self.HTMLDATA = []
 
-alphabet = set(['a','b','c','d','e','f','g','h','i','j','k''l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','A','B',
-                     'C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'])
+'''alphabet = set(['a','b','c','d','e','f','g','h','i','j','k''l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','A','B',
+                     'C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','>','<'])
 back_alphabet = set(['a','b','c','d','e','f,''g','h','i','j','k''l','m','n','o','p','q','r','t','u','v','w','x','y','z','A','B',
-                    'C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','T','U','V','W','X','Y','Z'])
+                    'C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','T','U','V','W','X','Y','Z'])'''
+
+#alphabet = 'a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z'
+#alphabet_back = 'a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,t,u,v,w,x,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,T,U,V,W,X,Y,Z'
+alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+alphabet_back = 'abcdefghijklmnopqrtuvwxyzABCDEFGHIJKLMNOPQRTUVWXYZ'
 
 htmlhead_one = '''<style>
 table, th, td {
@@ -149,7 +154,7 @@ window.onload = windowLoadsFunction</script>
 <body>
 <div id="framecontentleft">
 <div class="innertube">
-<script src="jquery-3.1.0.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
 <input type="checkbox" id="HideTag" name="HideTag" checked>Unmark correct glossaries<br>
 <input type="checkbox" id="MinorHide" name="MinorHide" checked>Hide lines that only has minor mistake ( {} tag in glossary comment)<br>
 <input type="checkbox" id="NoErrorhide" name="NoErrorhide" checked>Hide lines with no glossary error<br>
@@ -195,34 +200,66 @@ def Read_in_Glossary(Path):
         #Generate_Log('Glossary.txt is not found.\n')
     return ProcessedList
 
+def parse_Loctool(TempList):
+    for i in range(len(TempList)):
+        switch = 1
+        line = ''
+        tempstring = TempList[i]
+        while len(tempstring) > 0:
+            if tempstring[0] == '>':
+                switch = 1
+                tempstring = tempstring[1:]
+            elif tempstring[0] == '<':
+                switch = 0
+                tempstring = tempstring[1:]
+            elif switch == 0:
+                tempstring = tempstring[1:]
+            elif switch == 1:
+                if tempstring[0] == '\n' or tempstring[0] == '\t':
+                    tempstring = tempstring[1:]
+                else:
+                    line += tempstring[0]
+                    tempstring = tempstring[1:]
+        TempList[i] = line
+    return TempList
 
-def Parse_Document(html):
 
+
+def Parse_Document(textFile):
+    def has_Alphabet_Character(text):
+        result = False
+        for element in text:
+            if element.isalpha() == True:
+                result = True
+        #print(text, result)
+        return result
     #*******************************************************************************************************************
     # The following .replace function inserts a special character before each tag that is likely to represent a text
     # segment. Then use the .split function to split these segments into a list. Source file and target file should have
     # the same number of tags. So the list index should be equal between the source and the target list.
     #*******************************************************************************************************************
-    html = html.replace('<p', '※<p' )
-    html = html.replace('<h', '※<h')
-    html = html.replace('<span style="font', '※<span style="font')
-    html = html.replace('<block', '※<block')
-    html = html.replace('<td', '※<td')
-    html = html.replace('<th', '※<th')
+    textFile = textFile.replace('<p', '※<p' )
+    textFile = textFile.replace('<h', '※<h')
+
+    textFile = textFile.replace('<block', '※<block')
+    textFile = textFile.replace('<td', '※<td')
+    textFile = textFile.replace('<th', '※<th')
 
     # "span style" is used a lot in Heroes patchnote as the formating tag in every segment. WoW does not use this.
-    if '<span style' not in html:
-        html = html.replace('<li', '※<li')
+    if '<li><span' in textFile:
+        textFile = textFile.replace('<span style="font', '※<span style="font')
+    else:
+        textFile = textFile.replace('<li', '※<li')
     # replace \ufffd replacement character with single quote.
-    html = html.replace(u'\ufffd', '\'')
-    html = html.replace('’', '\'')
-    html = html.replace('&mdash;', '—')
-    html = html.replace('&ndash;', '—')
-    html = html.replace('&nbsp;' , '')
-    html = html.replace('&#160;' , '')
+    textFile = textFile.replace(u'\ufffd', '\'')
+    textFile = textFile.replace('’', '\'')
+    textFile = textFile.replace('&mdash;', '—')
+    textFile = textFile.replace('&ndash;', '—')
+    textFile = textFile.replace('&nbsp;' , '')
+    textFile = textFile.replace('&#160;' , '')
 
     #Split HTML at where '※' is inserted
-    TempList = html.split('※')
+    TempList = textFile.split('※')
     ProcessedList=[]
     for i in range(len(TempList)):
 
@@ -244,13 +281,16 @@ def Parse_Document(html):
 
 
         # removing lines that has 'blockquote'  and  'pydocx-caps'  which usually should not be localized.
-        if 'blockquote' not in textcontent and 'pydocx-caps' not in textcontent:
+        if 'blockquote' not in textcontent and 'pydocx-caps' not in textcontent and 'ul.tile-list' not in textcontent:
             #lines should not start with \r and should not be empty
             #if (len(textcontent) > 0) and (textcontent[0:1] != '\r') and (textcontent[0:2] != ' \r'):
-            if (len(textcontent) > 0) and (textcontent[0:1] != '\r') and (textcontent[0:2] != ' \r'):
+            #if (len(textcontent) > 0) and (textcontent[0:1] != '\r') and (textcontent[0:2] != ' \r') and (text[-2:-1] != ' \r'):
+            if has_Alphabet_Character(textcontent) == True:
                 #lines should not start as single quote '
-                if (textcontent[0:1] != '\'') and (textcontent[0:1] != u'\ufeff'):
-                    ProcessedList.append(textcontent)
+                #if (textcontent[0:1] != '\'') and (textcontent[0:1] != u'\ufeff'):
+                ProcessedList.append(textcontent)
+
+
 
     return ProcessedList
 
@@ -299,7 +339,7 @@ def Read_in_File(Path, mode):
         return Parse_Document(temp)
 
     else:
-        print('%s not found.\n' % Path)
+        print('%s not found. Doing nothing.\n' % Path)
         # read file failed. return an empty list
         return []
 
@@ -333,7 +373,7 @@ def Glossary_Check(SrcTable, TargetTable, Glossary):
         OutputTable =[]
         OutputTable.append(['Source', 'Target', 'Glossary and Comments', ''])
 
-        previouslyMarkedUpGlossary = ''
+
 
         for g in range(number):
         # for each glossary found in the Source text, there must be a matching localized translation in the target text.
@@ -341,6 +381,7 @@ def Glossary_Check(SrcTable, TargetTable, Glossary):
         # Use MatchedGlossary to store the matched glossaries we found. Also, Append glossary length column.
             MatchedGlossary = []
             NotMatchedGlossary = []
+            previousMarkedUpGlossary = ''
             for y in range(len(Glossary)):
                 CopyList =[]
                 if str(Glossary[y][0]).lower() in str(SrcTable[g]).lower():
@@ -378,6 +419,7 @@ def Glossary_Check(SrcTable, TargetTable, Glossary):
 
                 # Matched Glosaary should not be in any part of the Not Matched Glossaries.
                 if str(MatchedGlossary[elem][0]).upper() not in notmatched_glossary_set.upper():
+
                     len_before_markup = len(SourceTextList)
 
                     SourceTextList = Mark_Up(str(MatchedGlossary[elem][0]), SourceTextList, 'match')
@@ -400,20 +442,23 @@ def Glossary_Check(SrcTable, TargetTable, Glossary):
 
             for elem in range(len(NotMatchedGlossary)):
                 MultipleMatchedGlossary = False
+                tempComments=''
                 for elem2 in MatchedGlossary:
                     if str(NotMatchedGlossary[elem][0]).upper() == str(elem2[0]).upper():
                         MultipleMatchedGlossary = True
+                        if str(elem2[0]) not in tempComments:
+                            if len(elem2[2]) > 2:
+                                tempComments = '<br><br><li>' + elem2[0] + '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + \
+                                           elem2[
+                                           1] + '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + '<i>Comment:' + \
+                                           elem2[2] + '</i></li>'
+                            else:
+                                tempComments = '<br><br><li>' + elem2[0] + '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + \
+                                           elem2[
+                                           1] + '</li>'
 
-                        if len(NotMatchedGlossary[elem][2]) > 2:
-                            comments = '<li>' + elem2[0] + '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + \
-                                       elem2[
-                                       1] + '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + '<i>Comment:' + \
-                                       elem2[2] + '</i></li>'
-                        else:
-                            comments = '<li>' + elem2[0] + '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + \
-                                       elem2[
-                                       1] + '</li>'
-
+                #print(comments) debug
+                #print(MatchedGlossary,NotMatchedGlossary)
                 # Not Matched Glosaary should not be in any part of the Matched Glossaries.
                 if (str(NotMatchedGlossary[elem][0]).upper() not in matched_glossary_set.upper()) or MultipleMatchedGlossary == True:
 
@@ -424,15 +469,13 @@ def Glossary_Check(SrcTable, TargetTable, Glossary):
                     len_after_markup = len (SourceTextList)
 
                     if len_before_markup < len_after_markup:
-                        previouslyMarkedUpGlossary = copy.deepcopy(str(NotMatchedGlossary[elem][0]).upper())
-                    #這並非一個真正的錯誤glossary，把之前的comment 刪除
-                    elif len_before_markup == len_after_markup and MultipleMatchedGlossary == True:
-                        comments = ''
+                        previousMarkedUpGlossary = copy.deepcopy(str(NotMatchedGlossary[elem][0]).upper())
+
 
 
                     # if TextList length changed means we found an glossary error, add correct glossary with comments.
                     if len_before_markup < len_after_markup or \
-                    str(NotMatchedGlossary[elem][0]).upper() == previouslyMarkedUpGlossary:
+                            (str(NotMatchedGlossary[elem][0]).upper() == previousMarkedUpGlossary):
 
 
                         # If Glossary Comments has never been added for this line, add Glossary Comments.
@@ -461,6 +504,10 @@ def Glossary_Check(SrcTable, TargetTable, Glossary):
                                     0] + '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + \
                                            NotMatchedGlossary[elem][
                                                1] + '</li>'
+                        if tempComments !='':
+                            comments = comments + tempComments
+                            tempComments = ''
+
 
 
                         if ('{' and '}') in comments and comments.count('</li>') == comments.count('}'):
@@ -474,6 +521,7 @@ def Glossary_Check(SrcTable, TargetTable, Glossary):
                             ifminor = None
 
             # calling .join() method to join the content of the text hold list in to one line string.
+
             englishtext = str(''.join(SourceTextList))
             localizedtext = str(''.join(TargetTextList))
 
@@ -495,7 +543,7 @@ def Glossary_Check(SrcTable, TargetTable, Glossary):
 def Mark_Up(glossary, TextList, matchflag):
     # This is to mark the correct/incorrect glossary in Scour/Target line with HTML tags
     flag = 0
-    
+
 
     wordlength = len(glossary)
 
@@ -515,20 +563,24 @@ def Mark_Up(glossary, TextList, matchflag):
         else:
 
 
-
             # To check the glossary found in the text is independant vocabulary (no alphabet appears in front of or behind it).
             # Only exception is 's'  since it may be in plural from.
 
-            if TextList[flag][position - 1:position] not in alphabet:
-                if TextList[flag][position + wordlength:position + wordlength + 1] not in back_alphabet:
-                    if TextList[flag][position + wordlength:position + wordlength + 1] == ('s' or 'S') \
-                            and TextList[flag][position + wordlength +1 :position + wordlength + 2] in alphabet:
+            if (TextList[flag][position - 1:position] not in alphabet) or (flag==0 and position == 0):
+
+                if (TextList[flag][position + wordlength:position + wordlength + 1] not in alphabet_back) or \
+                        (position + wordlength + 1 >= len(TextList[flag])):
+
+                    if (TextList[flag][position + wordlength:position + wordlength + 1] == ('s' or 'S')) \
+                            and (TextList[flag][position + wordlength +1 :position + wordlength + 2] in alphabet)\
+                            and position + wordlength + 2 <= len(TextList[flag]):
+
 
                         flag += 1
 
 
-
                     elif matchflag == 'match':
+                        #print(TextList[flag]) #debug
                         # Mark up matched glossary by inserting <a class="correct"></a> tag if the list element has not been marked up yet.
                         if '</a>' not in TextList[flag]:
 
@@ -551,8 +603,9 @@ def Mark_Up(glossary, TextList, matchflag):
                             flag += 1
 
                     else:
-                        # Mark up unmatched glossary with <span class="incorrect"></span> tags if it has not been marked up yet.
 
+                        #print(TextList[flag]) #debug
+                        # Mark up unmatched glossary with <span class="incorrect"></span> tags if it has not been marked up yet.
                         if '</a>' not in TextList[flag] and '</span>'  not in TextList[flag]:
                             temp = TextList[flag][position:]
                             TextList[flag] = TextList[flag][:position]
@@ -652,19 +705,27 @@ def Generate_Result(OutputTable, mode, enlength, targetlength, targetencoding=No
 
 def readLocToolFile(Path):
     if os.path.exists(Path):
-        print('loctool.xlsx is found.\n')
         srcList=[]
         tarList=[]
         workbook = xlrd.open_workbook(filename=Path,encoding_override='utf-8')
-        worksheet = workbook.sheet_by_name(sheet_name='Sheet1')
-        for currentrow in range(worksheet.nrows):
-            srcList.append(worksheet.cell(currentrow, 0).value)
-            tarList.append(worksheet.cell(currentrow, 1).value)
+        #worksheet = workbook.sheet_by_name(sheet_name='Sheet1')
+        worksheet = workbook.sheet_by_index(0)
 
+        for currentrow in range(worksheet.nrows):
+            enCell = str(worksheet.cell(currentrow, 1).value)
+            twCell = str(worksheet.cell(currentrow, 2).value)
+
+            if '</' in str(worksheet.cell(currentrow, 1).value):
+                srcList.append(str(''.join(Parse_Document(enCell))))
+                tarList.append(str(''.join(Parse_Document(twCell))))
+            else:
+                srcList.append(enCell)
+                tarList.append(twCell)
+        print('loctool.xlsx is loaded successfully.\n')
         return srcList, tarList
 
     else:
-        print(Path + ' is not found in the folder')
+        print(Path + ' not found. Doing nothing.')
         return [], []
 
 
@@ -720,6 +781,8 @@ def main():
         # reads LocTool.xlsx
         SrcList, TargetList = readLocToolFile(loc_tool_path)
         # Processing LocTool.xlsx
+        SrcList = parse_Loctool(SrcList)
+        TargetList = parse_Loctool(TargetList)
         enlength = len(SrcList)
         targetlength = len(TargetList)
         OutPutList = Glossary_Check(SrcList, TargetList, GlossaryList)
